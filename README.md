@@ -15,17 +15,17 @@ This project demonstrates the integration between the following components:
 ## Architecture
 
 ```
-┌─────────────┐    MQTT     ┌─────────────────┐         ┌────────────────┐
-│   Device    ├────────────►│   MQTT Broker   │◄────────┤ Auth Server    │
-│   (CLI)     │             │   (RabbitMQ)    │         │                │
-└─────────────┘             └────────┬────────┘         └────────────────┘
-                                     │                           │
-                                     │ MQTT Sub                  │ HTTP Auth
-                                     │                           │
-┌─────────────┐    WebSocket ┌──────▼────────┐                 │
-│ Subscriber  ├─────────────►│    Backend    │◄────────────────┘
-│   (CLI)     │              │   Service     │
-└─────────────┘              └───────────────┘
+┌─────────────┐    MQTT     ┌─────────────────┐   HTTP Auth   ┌────────────────┐
+│   Device    ├────────────►│   MQTT Broker   ├──────────────►│ Auth Server    │
+│   (CLI)     │             │   (RabbitMQ)    │               │                │
+└─────────────┘             └────────┬────────┘               └────────────────┘
+                                     │                                 
+                                     │ MQTT Sub                        
+                                     │                                 
+┌─────────────┐    WebSocket ┌──────▼────────┐                        
+│ Subscriber  ├─────────────►│    Backend    │                        
+│   (CLI)     │              │   Service     │                        
+└─────────────┘              └───────────────┘                        
 ```
 
 ## Quick Start

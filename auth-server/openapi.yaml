@@ -1,0 +1,315 @@
+openapi: 3.0.3
+info:
+  title: RabbitMQ HTTP Authentication Backend API
+  description: |
+    HTTP authentication backend for RabbitMQ MQTT broker that provides device authentication 
+    and authorization for IoT bus tracking system. This API implements the RabbitMQ HTTP 
+    authentication backend protocol.
+    
+    ## Authentication Flow
+    
+    RabbitMQ calls these endpoints in sequence when a client attempts to connect:
+    1. `/user` - Authenticate username/password
+    2. `/vhost` - Authorize access to virtual host  
+    3. `/resource` - Authorize access to exchanges/queues
+    4. `/topic` - Authorize access to specific topics
+    
+    All endpoints must return HTTP 200 with body containing either "allow" or "deny".
+  version: 1.0.0
+  contact:
+    name: Choreo MQTT Demo
+  license:
+    name: ISC
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the authentication service
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-08-20T07:30:00.000Z"
+
+  /user:
+    post:
+      summary: User authentication
+      description: |
+        Authenticates a user with username and password. This is the first endpoint
+        called by RabbitMQ when a client attempts to connect.
+        
+        **Supported Users:**
+        - `admin` with password `admin123` (administrator with management rights)
+        - `Bus-1` through `Bus-50` with generated passwords (device users)
+      operationId: authenticateUser
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: Username (admin or Bus-N where N is 1-50)
+                  example: "Bus-1"
+                password:
+                  type: string
+                  description: Password for the user
+                  example: "7pBu3ieIePbrcRGn"
+                vhost:
+                  type: string
+                  description: Virtual host (usually "/")
+                  example: "/"
+                client_id:
+                  type: string
+                  description: MQTT client ID
+                  example: "Bus-1"
+      responses:
+        '200':
+          description: Authentication result
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["allow", "deny", "allow administrator management"]
+              examples:
+                allow:
+                  summary: Device authentication successful
+                  value: "allow"
+                allow_admin:
+                  summary: Admin authentication successful
+                  value: "allow administrator management"
+                deny:
+                  summary: Authentication failed
+                  value: "deny"
+
+  /vhost:
+    post:
+      summary: Virtual host authorization
+      description: |
+        Authorizes access to a virtual host. Called after successful user authentication.
+        Currently only allows access to the default virtual host "/".
+      operationId: authorizeVhost
+      tags:
+        - Authorization
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - username
+                - vhost
+              properties:
+                username:
+                  type: string
+                  description: Authenticated username
+                  example: "Bus-1"
+                vhost:
+                  type: string
+                  description: Virtual host to access
+                  example: "/"
+                ip:
+                  type: string
+                  description: Client IP address
+                  example: "::ffff:10.89.0.3"
+                client_id:
+                  type: string
+                  description: MQTT client ID
+                  example: "Bus-1"
+      responses:
+        '200':
+          description: Authorization result
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["allow", "deny"]
+              examples:
+                allow:
+                  summary: Vhost access granted
+                  value: "allow"
+                deny:
+                  summary: Vhost access denied
+                  value: "deny"
+
+  /resource:
+    post:
+      summary: Resource authorization
+      description: |
+        Authorizes access to RabbitMQ resources (exchanges, queues, etc.).
+        Devices are allowed to read/write to exchanges and topics needed for MQTT operation.
+      operationId: authorizeResource
+      tags:
+        - Authorization
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - username
+                - vhost
+                - resource
+                - permission
+              properties:
+                username:
+                  type: string
+                  description: Authenticated username
+                  example: "Bus-1"
+                vhost:
+                  type: string
+                  description: Virtual host
+                  example: "/"
+                resource:
+                  type: string
+                  enum: ["exchange", "queue", "topic"]
+                  description: Type of resource being accessed
+                  example: "exchange"
+                name:
+                  type: string
+                  description: Name of the resource
+                  example: "amq.topic"
+                permission:
+                  type: string
+                  enum: ["configure", "write", "read"]
+                  description: Type of permission requested
+                  example: "write"
+                client_id:
+                  type: string
+                  description: MQTT client ID
+                  example: "Bus-1"
+      responses:
+        '200':
+          description: Authorization result
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["allow", "deny"]
+              examples:
+                allow:
+                  summary: Resource access granted
+                  value: "allow"
+                deny:
+                  summary: Resource access denied
+                  value: "deny"
+
+  /topic:
+    post:
+      summary: Topic authorization
+      description: |
+        Authorizes access to specific MQTT topics. Devices can only publish to their
+        designated topic path `/some/path/{deviceId}` (converted to routing key format).
+        
+        **Topic Access Rules:**
+        - Admin: Full access to all topics
+        - Devices: Can only write to `.some.path.{deviceId}` and subtopics
+        - Devices: Can read from any topic
+      operationId: authorizeTopic
+      tags:
+        - Authorization
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - username
+                - vhost
+                - resource
+                - permission
+                - routing_key
+              properties:
+                username:
+                  type: string
+                  description: Authenticated username
+                  example: "Bus-1"
+                vhost:
+                  type: string
+                  description: Virtual host
+                  example: "/"
+                resource:
+                  type: string
+                  description: Resource type (usually "topic")
+                  example: "topic"
+                name:
+                  type: string
+                  description: Exchange name
+                  example: "amq.topic"
+                permission:
+                  type: string
+                  enum: ["write", "read"]
+                  description: Permission type
+                  example: "write"
+                routing_key:
+                  type: string
+                  description: |
+                    AMQP routing key (MQTT topic with slashes converted to dots)
+                    e.g., MQTT topic `/some/path/Bus-1` becomes `.some.path.Bus-1`
+                  example: ".some.path.Bus-1"
+                client_id:
+                  type: string
+                  description: MQTT client ID
+                  example: "Bus-1"
+      responses:
+        '200':
+          description: Authorization result
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["allow", "deny"]
+              examples:
+                allow:
+                  summary: Topic access granted
+                  value: "allow"
+                deny:
+                  summary: Topic access denied
+                  value: "deny"
+
+components:
+  schemas:
+    AuthResult:
+      type: string
+      enum: ["allow", "deny", "allow administrator management"]
+      description: |
+        Authentication/authorization result:
+        - "allow": Grant access
+        - "deny": Deny access  
+        - "allow administrator management": Grant access with admin privileges
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Authorization
+    description: Resource and topic authorization endpoints

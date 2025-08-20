@@ -5,7 +5,7 @@ import Table from 'cli-table3';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { Device, DeviceData } from './types';
-import { formatDeviceData, clearScreen, createDeviceTable } from './utils';
+import { formatDeviceData, createDeviceTable } from './utils';
 
 dotenv.config();
 
@@ -118,7 +118,7 @@ class SubscriberCLI {
       
       const table = createDeviceTable();
       devices.forEach(device => {
-        table.push([
+        (table as any).push([
           device.id,
           device.name,
           this.getStatusIcon(device.status),
@@ -147,7 +147,7 @@ class SubscriberCLI {
 
       const table = createDeviceTable();
       devices.forEach(device => {
-        table.push([
+        (table as any).push([
           device.id,
           device.name,
           this.getStatusIcon(device.status),
@@ -174,7 +174,7 @@ class SubscriberCLI {
         colWidths: [15, 10]
       });
 
-      table.push(
+      (table as any).push(
         ['Total', stats.total],
         ['🟢 Online', chalk.green(stats.online)],
         ['🔴 Offline', chalk.red(stats.offline)],
@@ -246,7 +246,7 @@ class SubscriberCLI {
         resolve();
       };
 
-      const keyHandler = (str: string, key: any) => {
+      const keyHandler = (_str: string, key: any) => {
         if (key.ctrl && key.name === 'c') {
           stopMonitoring();
         }

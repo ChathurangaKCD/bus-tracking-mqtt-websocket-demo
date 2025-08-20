@@ -41,7 +41,7 @@ export function clearScreen(): void {
   console.clear();
 }
 
-export function createDeviceTable(): Table {
+export function createDeviceTable(): any {
   return new Table({
     head: ['Device ID', 'Name', 'Status', 'Last Seen'],
     colWidths: [12, 15, 18, 25],

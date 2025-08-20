@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mqtt-broker
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+      - "1883:1883"    # MQTT port
+      - "15675:15675"  # MQTT over WebSocket
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mqtt-demo-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  auth-server:
+    build: ./auth-server
+    container_name: device-auth-server
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+    networks:
+      - mqtt-demo-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: mqtt-backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      MQTT_BROKER_URL: mqtt://rabbitmq:1883
+      NODE_ENV: production
+    networks:
+      - mqtt-demo-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  mqtt-demo-network:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:

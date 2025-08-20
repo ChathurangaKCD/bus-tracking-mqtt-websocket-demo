@@ -34,19 +34,23 @@ authRoutes.post('/vhost', (req: Request, res: Response): void => {
   console.log('AUTH /vhost request:', req.body);
   
   const { username, vhost } = req.body;
+  const allowedVhost = process.env.ALLOWED_VHOST || '/';
   
   if (!username || !vhost) {
     res.status(200).send('deny');
     return;
   }
   
-  if (vhost === '/' || vhost === '%2F') {
-    console.log(`✅ Vhost access granted for ${username}`);
+  // Check if vhost matches the allowed vhost (handle URL encoding)
+  if (vhost === allowedVhost || 
+      vhost === encodeURIComponent(allowedVhost) ||
+      (allowedVhost === '/' && vhost === '%2F')) {
+    console.log(`✅ Vhost access granted for ${username} to ${vhost}`);
     res.status(200).send('allow');
     return;
   }
   
-  console.log(`❌ Vhost access denied for ${username} to ${vhost}`);
+  console.log(`❌ Vhost access denied for ${username} to ${vhost} (allowed: ${allowedVhost})`);
   res.status(200).send('deny');
 });
 

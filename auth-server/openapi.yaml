@@ -112,7 +112,7 @@ paths:
       summary: Virtual host authorization
       description: |
         Authorizes access to a virtual host. Called after successful user authentication.
-        Currently only allows access to the default virtual host "/".
+        Allowed vhost is configurable via ALLOWED_VHOST environment variable (default: "/").
       operationId: authorizeVhost
       tags:
         - Authorization

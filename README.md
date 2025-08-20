@@ -133,6 +133,68 @@ The auth server generates passwords for buses 1-50:
 - ✅ Automatic reconnection handling
 - ✅ Comprehensive error handling
 
+## Production Deployment (CloudAMQP)
+
+For production deployment using CloudAMQP, the following configuration changes are required:
+
+### CloudAMQP Configuration
+
+Contact CloudAMQP support to configure the authentication backends in this order:
+
+```conf
+# Try internal auth first (for CloudAMQP admin users), then HTTP auth
+auth_backends.1 = internal
+auth_backends.2 = http
+
+# HTTP Authentication Backend Configuration  
+auth_http.http_method = post
+auth_http.user_path = https://your-auth-server.com/user
+auth_http.vhost_path = https://your-auth-server.com/vhost
+auth_http.resource_path = https://your-auth-server.com/resource
+auth_http.topic_path = https://your-auth-server.com/topic
+```
+
+**Key Points:**
+- CloudAMQP manages admin users via internal authentication
+- Device authentication (Bus-1 to Bus-50) handled by your HTTPS auth server
+- No mTLS required between RabbitMQ and auth server
+- Auth server must be publicly accessible over HTTPS
+
+### Auth Server Deployment
+
+1. **Deploy auth server** to a cloud platform with HTTPS support
+2. **Update environment variables** for production:
+   ```env
+   PORT=3001
+   AUTH_SECRET=your-production-secret-key
+   NODE_ENV=production
+   ```
+3. **Configure CloudAMQP** to use your auth server HTTPS URL
+4. **Update device/backend configuration** to use CloudAMQP MQTT URL
+
+### Application Configuration Updates
+
+**Backend Service (.env):**
+```env
+MQTT_BROKER_URL=mqtts://your-cloudamqp-instance.cloudamqp.com:8883
+MQTT_USERNAME=admin  
+MQTT_PASSWORD=your-cloudamqp-admin-password
+```
+
+**Device CLI (.env):**
+```env
+MQTT_BROKER_URL=mqtts://your-cloudamqp-instance.cloudamqp.com:8883
+```
+
+### Authentication Flow (Production)
+
+1. **Admin Users**: Authenticated by CloudAMQP internal backend
+2. **Device Users** (Bus-1 to Bus-50): Authenticated via your HTTPS auth server
+3. **Auth Backend Order**: Internal first → HTTP fallback
+4. **Security**: HTTPS encryption, no client certificates required
+
+**Note**: Contact CloudAMQP support to ensure they support HTTP authentication backend chaining with internal auth fallback for your specific use case.
+
 ## Development
 
 Each component supports:
@@ -142,7 +204,7 @@ Each component supports:
 
 ## Monitoring
 
-- RabbitMQ Management: http://localhost:15672
+- RabbitMQ Management: http://localhost:15672 (dev) / CloudAMQP Management UI (prod)
 - Device count: 50 buses (Bus-1 to Bus-50)
 - Real-time updates via WebSocket
 - REST API for device status

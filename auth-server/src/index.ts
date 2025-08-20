@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { generatePassword, validateDevice } from './utils';
+import { generatePassword } from './utils';
 import { authRoutes } from './routes/auth';
 
 dotenv.config();

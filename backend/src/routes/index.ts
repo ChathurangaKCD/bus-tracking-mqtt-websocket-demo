@@ -29,15 +29,16 @@ export function setupRoutes(app: Express, deviceService: DeviceService): void {
     });
   });
 
-  app.get('/devices/:deviceId', (req: Request, res: Response) => {
+  app.get('/devices/:deviceId', (req: Request, res: Response): void => {
     const { deviceId } = req.params;
     const device = deviceService.getDevice(deviceId);
     
     if (!device) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Device not found'
       });
+      return;
     }
 
     res.json({
@@ -46,15 +47,16 @@ export function setupRoutes(app: Express, deviceService: DeviceService): void {
     });
   });
 
-  app.get('/devices/:deviceId/data', (req: Request, res: Response) => {
+  app.get('/devices/:deviceId/data', (req: Request, res: Response): void => {
     const { deviceId } = req.params;
     const device = deviceService.getDevice(deviceId);
     
     if (!device) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Device not found'
       });
+      return;
     }
 
     const lastData = deviceService.getLastDeviceData(deviceId);
@@ -73,14 +75,15 @@ export function setupRoutes(app: Express, deviceService: DeviceService): void {
     });
   });
 
-  app.get('/devices/status/:status', (req: Request, res: Response) => {
+  app.get('/devices/status/:status', (req: Request, res: Response): void => {
     const { status } = req.params;
     
     if (!['online', 'offline', 'maintenance'].includes(status)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid status. Must be: online, offline, or maintenance'
       });
+      return;
     }
 
     const devices = deviceService.getDevicesByStatus(status as any);

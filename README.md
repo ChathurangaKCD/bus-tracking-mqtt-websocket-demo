@@ -114,7 +114,7 @@ Each component has its own `.env.example` file with required configuration:
 
 - **auth-server**: Port and secret key
 - **backend**: Port and MQTT connection details
-- **device**: MQTT broker URL and publish interval
+- **device**: MQTT broker URL, publish interval, and authentication settings
 - **subscriber**: Backend and WebSocket URLs
 
 ## Device Credentials
@@ -184,6 +184,7 @@ MQTT_PASSWORD=your-cloudamqp-admin-password
 **Device CLI (.env):**
 ```env
 MQTT_BROKER_URL=mqtts://your-cloudamqp-instance.cloudamqp.com:8883
+ENABLE_AUTH=true
 ```
 
 ### Authentication Flow (Production)
@@ -194,6 +195,29 @@ MQTT_BROKER_URL=mqtts://your-cloudamqp-instance.cloudamqp.com:8883
 4. **Security**: HTTPS encryption, no client certificates required
 
 **Note**: Contact CloudAMQP support to ensure they support HTTP authentication backend chaining with internal auth fallback for your specific use case.
+
+### Fallback Option (If CloudAMQP Doesn't Support HTTP Auth)
+
+If CloudAMQP refuses to configure HTTP authentication backend, you can disable device authentication:
+
+**Device CLI (.env):**
+```env
+MQTT_BROKER_URL=mqtts://your-cloudamqp-instance.cloudamqp.com:8883
+ENABLE_AUTH=false
+```
+
+**Usage without authentication:**
+```bash
+cd device
+# No password required when auth disabled
+npm run dev -- --device-id Bus-1
+```
+
+**Key Changes with Disabled Auth:**
+- ✅ Device connects without username/password
+- ✅ Password parameter becomes optional
+- ⚠️ **Security**: No device-level authentication (rely on network security)
+- ⚠️ **Topic Control**: No per-device topic restrictions
 
 ## Development
 

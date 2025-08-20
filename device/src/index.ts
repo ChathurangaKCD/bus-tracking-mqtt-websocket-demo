@@ -8,13 +8,14 @@ dotenv.config();
 
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
 const PUBLISH_INTERVAL = parseInt(process.env.PUBLISH_INTERVAL || '5000', 10);
+const ENABLE_AUTH = process.env.ENABLE_AUTH !== 'false';
 
 program
   .name('device-cli')
   .description('MQTT device simulator for bus tracking')
   .version('1.0.0')
   .requiredOption('-d, --device-id <id>', 'Device ID (e.g., Bus-1)')
-  .requiredOption('-p, --password <password>', 'Device password')
+  .option('-p, --password <password>', 'Device password (required when auth enabled)')
   .option('-i, --interval <ms>', 'Publish interval in milliseconds', PUBLISH_INTERVAL.toString())
   .parse();
 
@@ -28,17 +29,31 @@ if (!validateDeviceId(deviceId)) {
   process.exit(1);
 }
 
+if (ENABLE_AUTH && !password) {
+  console.error(chalk.red('❌ Password is required when authentication is enabled'));
+  console.error(chalk.gray('   Set ENABLE_AUTH=false in .env to disable authentication'));
+  process.exit(1);
+}
+
 console.log(chalk.blue(`🚌 Starting device: ${deviceId}`));
 console.log(chalk.gray(`📡 Connecting to MQTT broker: ${MQTT_BROKER_URL}`));
+console.log(chalk.gray(`🔐 Authentication: ${ENABLE_AUTH ? 'enabled' : 'disabled'}`));
 
-const client = mqtt.connect(MQTT_BROKER_URL, {
+// Build MQTT connection options
+const mqttOptions: any = {
   clientId: deviceId,
-  username: deviceId,
-  password: password,
   clean: true,
   reconnectPeriod: 5000,
   connectTimeout: 30000,
-});
+};
+
+// Add authentication only if enabled
+if (ENABLE_AUTH) {
+  mqttOptions.username = deviceId;
+  mqttOptions.password = password;
+}
+
+const client = mqtt.connect(MQTT_BROKER_URL, mqttOptions);
 
 const topic = `/some/path/${deviceId}`;
 let publishInterval: NodeJS.Timeout | null = null;

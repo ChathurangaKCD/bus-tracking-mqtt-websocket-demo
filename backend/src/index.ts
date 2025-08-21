@@ -84,13 +84,13 @@ wsApp.get('/health', (_req, res) => {
 });
 
 // Start both servers
-httpServer.listen(HTTP_PORT, () => {
-  console.log(`🚀 HTTP API server running on http://localhost:${HTTP_PORT}`);
+httpServer.listen(Number(HTTP_PORT), '0.0.0.0', () => {
+  console.log(`🚀 HTTP API server running on http://0.0.0.0:${HTTP_PORT}`);
   console.log(`📡 Connected to MQTT broker: ${MQTT_BROKER_URL}`);
 });
 
-wsServer.listen(WS_PORT, () => {
-  console.log(`🔗 WebSocket server running on ws://localhost:${WS_PORT}`);
+wsServer.listen(Number(WS_PORT), '0.0.0.0', () => {
+  console.log(`🔗 WebSocket server running on ws://0.0.0.0:${WS_PORT}`);
 });
 
 process.on('SIGINT', () => {

@@ -30,7 +30,7 @@ endpoints:
       # +required Numeric port value that gets exposed via the endpoint
       port: 3001
     # +required Type of traffic that the endpoint is accepting.
-    # Allowed values: REST, GraphQL, GRPC, TCP, UDP.
+    # Allowed values: REST, GraphQL, GRPC, TCP, UDP, WS.
     type: WS
     # +optional Network level visibilities of the endpoint.
     # Accepted values: Project|Organization|Public(Default).
@@ -56,6 +56,8 @@ endpoints:
     # Accepted values: Project|Organization|Public(Default).
     networkVisibilities:
       - Public
+      - Organization
+      - Project
     # +optional Path to the schema definition file. Defaults to wild card route if not provided
     # This is only applicable to REST endpoint types.
     # The path should be relative to the docker context.

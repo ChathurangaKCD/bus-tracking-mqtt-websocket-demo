@@ -1,22 +1,28 @@
-import { program } from 'commander';
-import * as mqtt from 'mqtt';
-import chalk from 'chalk';
-import dotenv from 'dotenv';
-import { generateRandomData, validateDeviceId } from './utils';
+import { program } from "commander";
+import * as mqtt from "mqtt";
+import chalk from "chalk";
+import dotenv from "dotenv";
+import { generateRandomData, validateDeviceId } from "./utils";
 
 dotenv.config();
 
-const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
-const PUBLISH_INTERVAL = parseInt(process.env.PUBLISH_INTERVAL || '5000', 10);
-const ENABLE_AUTH = process.env.ENABLE_AUTH !== 'false';
+const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
+const PUBLISH_INTERVAL = parseInt(process.env.PUBLISH_INTERVAL || "5000", 10);
 
 program
-  .name('device-cli')
-  .description('MQTT device simulator for bus tracking')
-  .version('1.0.0')
-  .requiredOption('-d, --device-id <id>', 'Device ID (e.g., Bus-1)')
-  .option('-p, --password <password>', 'Device password (required when auth enabled)')
-  .option('-i, --interval <ms>', 'Publish interval in milliseconds', PUBLISH_INTERVAL.toString())
+  .name("device-cli")
+  .description("MQTT device simulator for bus tracking")
+  .version("1.0.0")
+  .requiredOption("-d, --device-id <id>", "Device ID (e.g., Bus-1)")
+  .option(
+    "-p, --password <password>",
+    "Device password (required when auth enabled)"
+  )
+  .option(
+    "-i, --interval <ms>",
+    "Publish interval in milliseconds",
+    PUBLISH_INTERVAL.toString()
+  )
   .parse();
 
 const options = program.opts();
@@ -25,19 +31,14 @@ const password = options.password;
 const interval = parseInt(options.interval, 10);
 
 if (!validateDeviceId(deviceId)) {
-  console.error(chalk.red('❌ Invalid device ID. Must be in format Bus-N where N is 1-50'));
-  process.exit(1);
-}
-
-if (ENABLE_AUTH && !password) {
-  console.error(chalk.red('❌ Password is required when authentication is enabled'));
-  console.error(chalk.gray('   Set ENABLE_AUTH=false in .env to disable authentication'));
+  console.error(
+    chalk.red("❌ Invalid device ID. Must be in format Bus-N where N is 1-50")
+  );
   process.exit(1);
 }
 
 console.log(chalk.blue(`🚌 Starting device: ${deviceId}`));
 console.log(chalk.gray(`📡 Connecting to MQTT broker: ${MQTT_BROKER_URL}`));
-console.log(chalk.gray(`🔐 Authentication: ${ENABLE_AUTH ? 'enabled' : 'disabled'}`));
 
 // Build MQTT connection options
 const mqttOptions: any = {
@@ -48,10 +49,8 @@ const mqttOptions: any = {
 };
 
 // Add authentication only if enabled
-if (ENABLE_AUTH) {
-  mqttOptions.username = deviceId;
-  mqttOptions.password = password;
-}
+mqttOptions.username = deviceId;
+mqttOptions.password = password;
 
 const client = mqtt.connect(MQTT_BROKER_URL, mqttOptions);
 
@@ -59,38 +58,38 @@ const topic = `/some/path/${deviceId}`;
 let publishInterval: NodeJS.Timeout | null = null;
 let messageCount = 0;
 
-client.on('connect', () => {
+client.on("connect", () => {
   console.log(chalk.green(`✅ Connected to MQTT broker`));
   console.log(chalk.blue(`📢 Publishing to topic: ${topic}`));
-  
+
   startPublishing();
 });
 
-client.on('error', (error) => {
+client.on("error", (error) => {
   console.error(chalk.red(`❌ MQTT Error: ${error.message}`));
 });
 
-client.on('close', () => {
-  console.log(chalk.yellow('🔌 Disconnected from MQTT broker'));
+client.on("close", () => {
+  console.log(chalk.yellow("🔌 Disconnected from MQTT broker"));
   stopPublishing();
 });
 
-client.on('reconnect', () => {
-  console.log(chalk.yellow('🔄 Reconnecting to MQTT broker...'));
+client.on("reconnect", () => {
+  console.log(chalk.yellow("🔄 Reconnecting to MQTT broker..."));
 });
 
-client.on('offline', () => {
-  console.log(chalk.yellow('📴 Client is offline'));
+client.on("offline", () => {
+  console.log(chalk.yellow("📴 Client is offline"));
   stopPublishing();
 });
 
 function startPublishing(): void {
   if (publishInterval) return;
-  
+
   publishInterval = setInterval(() => {
     const data = generateRandomData(deviceId);
     const message = JSON.stringify(data);
-    
+
     client.publish(topic, message, { qos: 1 }, (error) => {
       if (error) {
         console.error(chalk.red(`❌ Failed to publish: ${error.message}`));
@@ -109,16 +108,16 @@ function stopPublishing(): void {
   }
 }
 
-process.on('SIGINT', () => {
-  console.log(chalk.yellow('\n👋 Shutting down gracefully...'));
+process.on("SIGINT", () => {
+  console.log(chalk.yellow("\n👋 Shutting down gracefully..."));
   stopPublishing();
   client.end(true, {}, () => {
-    console.log(chalk.blue('✅ Disconnected cleanly'));
+    console.log(chalk.blue("✅ Disconnected cleanly"));
     process.exit(0);
   });
 });
 
-process.on('SIGTERM', () => {
+process.on("SIGTERM", () => {
   stopPublishing();
   client.end(true);
   process.exit(0);

@@ -1,0 +1,254 @@
+asyncapi: 2.6.0
+info:
+  title: MQTT Backend WebSocket API
+  version: 1.0.0
+  description: |
+    Real-time WebSocket API for device tracking and monitoring. This API bridges MQTT device messages 
+    to WebSocket clients, providing real-time updates for IoT bus tracking system.
+    
+    ## Connection Flow
+    1. Client connects to WebSocket endpoint
+    2. Client subscribes to specific devices
+    3. Server sends real-time updates as devices publish data
+    4. Client can unsubscribe or disconnect at any time
+  license:
+    name: ISC
+  contact:
+    name: Choreo MQTT Demo
+
+servers:
+  development:
+    url: ws://localhost:3000
+    protocol: ws
+    description: Development server
+  production:
+    url: wss://your-backend-service.com
+    protocol: wss
+    description: Production server (secure WebSocket)
+
+channels:
+  /:
+    description: Main WebSocket endpoint for real-time device updates
+    subscribe:
+      summary: Receive messages from server
+      description: |
+        Subscribe to receive real-time device updates and responses to client commands.
+        The server sends different message types based on client actions and device activity.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/deviceUpdate'
+          - $ref: '#/components/messages/deviceList'
+    publish:
+      summary: Send messages to server
+      description: |
+        Send commands to the server to subscribe/unsubscribe from devices or request device lists.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/subscribeDevice'
+          - $ref: '#/components/messages/unsubscribeDevice'
+          - $ref: '#/components/messages/listDevices'
+
+components:
+  messages:
+    deviceUpdate:
+      name: device-update
+      title: Device Update
+      summary: Real-time device data update
+      description: |
+        Sent by the server when a subscribed device publishes new data.
+        Contains location, status, and telemetry information.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceUpdatePayload'
+      examples:
+        - name: busLocationUpdate
+          summary: Bus location update
+          payload:
+            deviceId: Bus-1
+            timestamp: "2025-08-20T12:30:45.123Z"
+            location:
+              lat: 6.9271
+              lng: 79.8612
+            speed: 45
+            passengers: 25
+            fuel: 75
+            status: active
+            randomString: "a1b2c3d4e5f6g7h8"
+
+    deviceList:
+      name: device-list
+      title: Device List
+      summary: List of all available devices
+      description: |
+        Sent by the server in response to a list-devices request.
+        Contains information about all 50 bus devices.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DeviceListPayload'
+      examples:
+        - name: allDevices
+          summary: Complete device list
+          payload:
+            - id: Bus-1
+              name: Bus 1
+              status: online
+              lastSeen: "2025-08-20T12:30:00.000Z"
+            - id: Bus-2
+              name: Bus 2
+              status: offline
+              lastSeen: "2025-08-20T11:15:00.000Z"
+
+    subscribeDevice:
+      name: subscribe-device
+      title: Subscribe to Device
+      summary: Subscribe to real-time updates from a specific device
+      description: |
+        Client sends this message to start receiving updates from a specific device.
+        Server will send the last known data immediately if available.
+      contentType: application/json
+      payload:
+        type: string
+        description: Device ID to subscribe to (e.g., Bus-1 through Bus-50)
+        example: "Bus-1"
+
+    unsubscribeDevice:
+      name: unsubscribe-device
+      title: Unsubscribe from Device
+      summary: Stop receiving updates from a specific device
+      description: Client sends this message to stop receiving updates from a device.
+      contentType: application/json
+      payload:
+        type: string
+        description: Device ID to unsubscribe from
+        example: "Bus-1"
+
+    listDevices:
+      name: list-devices
+      title: List Devices
+      summary: Request list of all available devices
+      description: |
+        Client sends this message to request a list of all devices.
+        Server responds with device-list message.
+      contentType: application/json
+      payload:
+        type: object
+        properties: {}
+        description: Empty object (no payload required)
+
+  schemas:
+    DeviceUpdatePayload:
+      type: object
+      required:
+        - deviceId
+        - timestamp
+        - location
+        - speed
+        - passengers
+        - fuel
+        - status
+        - randomString
+      properties:
+        deviceId:
+          type: string
+          description: Unique device identifier
+          pattern: '^Bus-([1-9]|[1-4][0-9]|50)$'
+          example: "Bus-1"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the update
+          example: "2025-08-20T12:30:45.123Z"
+        location:
+          type: object
+          required:
+            - lat
+            - lng
+          properties:
+            lat:
+              type: number
+              format: double
+              description: Latitude coordinate
+              minimum: -90
+              maximum: 90
+              example: 6.9271
+            lng:
+              type: number
+              format: double
+              description: Longitude coordinate
+              minimum: -180
+              maximum: 180
+              example: 79.8612
+        speed:
+          type: integer
+          description: Current speed in km/h
+          minimum: 0
+          maximum: 120
+          example: 45
+        passengers:
+          type: integer
+          description: Current passenger count
+          minimum: 0
+          maximum: 60
+          example: 25
+        fuel:
+          type: integer
+          description: Fuel level percentage
+          minimum: 0
+          maximum: 100
+          example: 75
+        status:
+          type: string
+          enum: [active, maintenance]
+          description: Current device status
+          example: "active"
+        randomString:
+          type: string
+          description: Random identifier for message tracking
+          example: "a1b2c3d4e5f6g7h8"
+
+    DeviceListPayload:
+      type: array
+      items:
+        type: object
+        required:
+          - id
+          - name
+          - status
+        properties:
+          id:
+            type: string
+            description: Device identifier
+            pattern: '^Bus-([1-9]|[1-4][0-9]|50)$'
+            example: "Bus-1"
+          name:
+            type: string
+            description: Human-readable device name
+            example: "Bus 1"
+          status:
+            type: string
+            enum: [online, offline, maintenance]
+            description: Current device connection status
+            example: "online"
+          lastSeen:
+            type: string
+            format: date-time
+            description: Last time device was active
+            example: "2025-08-20T12:30:00.000Z"
+          lastData:
+            $ref: '#/components/schemas/DeviceUpdatePayload'
+            description: Last received data from device
+
+    Location:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          format: double
+          description: Latitude coordinate
+        lng:
+          type: number
+          format: double
+          description: Longitude coordinate

@@ -9,24 +9,24 @@ authRoutes.post('/user', (req: Request, res: Response): void => {
   const { username, password } = parseAuthRequest(req.body);
   
   if (!username || !password) {
-    console.log('❌ Missing credentials');
+    console.log('[AUTH] Missing credentials');
     res.status(200).send('deny');
     return;
   }
   
   if (username === 'admin' && password === 'admin123') {
-    console.log('✅ Admin authenticated');
+    console.log('[AUTH] Admin authenticated');
     res.status(200).send('allow administrator management');
     return;
   }
   
   if (validateDevice(username, password)) {
-    console.log(`✅ Device ${username} authenticated`);
+    console.log(`[AUTH] Device ${username} authenticated`);
     res.status(200).send('allow');
     return;
   }
   
-  console.log(`❌ Authentication failed for ${username}`);
+  console.log(`[AUTH] Authentication failed for ${username}`);
   res.status(200).send('deny');
 });
 
@@ -45,12 +45,12 @@ authRoutes.post('/vhost', (req: Request, res: Response): void => {
   if (vhost === allowedVhost || 
       vhost === encodeURIComponent(allowedVhost) ||
       (allowedVhost === '/' && vhost === '%2F')) {
-    console.log(`✅ Vhost access granted for ${username} to ${vhost}`);
+    console.log(`[AUTH] Vhost access granted for ${username} to ${vhost}`);
     res.status(200).send('allow');
     return;
   }
   
-  console.log(`❌ Vhost access denied for ${username} to ${vhost} (allowed: ${allowedVhost})`);
+  console.log(`[AUTH] Vhost access denied for ${username} to ${vhost} (allowed: ${allowedVhost})`);
   res.status(200).send('deny');
 });
 
@@ -65,7 +65,7 @@ authRoutes.post('/resource', (req: Request, res: Response): void => {
   }
   
   if (username === 'admin') {
-    console.log(`✅ Resource access granted for admin`);
+    console.log(`[AUTH] Resource access granted for admin`);
     res.status(200).send('allow');
     return;
   }
@@ -74,20 +74,20 @@ authRoutes.post('/resource', (req: Request, res: Response): void => {
   if (deviceMatch) {
     // Allow devices to write to exchanges (needed for MQTT publishing)
     if ((resource === 'exchange' || resource === 'topic') && permission === 'write') {
-      console.log(`✅ Resource access granted for ${username} - ${permission} to ${resource}`);
+      console.log(`[AUTH] Resource access granted for ${username} - ${permission} to ${resource}`);
       res.status(200).send('allow');
       return;
     }
     
     // Allow devices to read from topics/exchanges
     if ((resource === 'exchange' || resource === 'topic') && permission === 'read') {
-      console.log(`✅ Resource access granted for ${username} - ${permission} to ${resource}`);
+      console.log(`[AUTH] Resource access granted for ${username} - ${permission} to ${resource}`);
       res.status(200).send('allow');
       return;
     }
   }
   
-  console.log(`❌ Resource access denied for ${username}`);
+  console.log(`[AUTH] Resource access denied for ${username}`);
   res.status(200).send('deny');
 });
 
@@ -102,7 +102,7 @@ authRoutes.post('/topic', (req: Request, res: Response): void => {
   }
   
   if (username === 'admin') {
-    console.log(`✅ Topic access granted for admin to ${routing_key}`);
+    console.log(`[AUTH] Topic access granted for admin to ${routing_key}`);
     res.status(200).send('allow');
     return;
   }
@@ -114,18 +114,18 @@ authRoutes.post('/topic', (req: Request, res: Response): void => {
     
     if (permission === 'write' && 
         (routing_key === allowedPath || routing_key.startsWith(`${allowedPath}.`))) {
-      console.log(`✅ Topic write access granted for ${username} to ${routing_key}`);
+      console.log(`[AUTH] Topic write access granted for ${username} to ${routing_key}`);
       res.status(200).send('allow');
       return;
     }
     
     if (permission === 'read') {
-      console.log(`✅ Topic read access granted for ${username} to ${routing_key}`);
+      console.log(`[AUTH] Topic read access granted for ${username} to ${routing_key}`);
       res.status(200).send('allow');
       return;
     }
   }
   
-  console.log(`❌ Topic access denied for ${username} to ${routing_key}`);
+  console.log(`[AUTH] Topic access denied for ${username} to ${routing_key}`);
   res.status(200).send('deny');
 });

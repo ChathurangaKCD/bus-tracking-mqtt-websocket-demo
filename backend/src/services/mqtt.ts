@@ -32,8 +32,14 @@ export class MQTTService extends EventEmitter {
     return new Promise((resolve, reject) => {
       console.log(`📡 Connecting to MQTT broker: ${this.brokerUrl}`);
       
+      // Generate unique client ID for this replica to avoid conflicts
+      const instanceId = process.env.INSTANCE_ID || Math.random().toString(36).substring(2, 15);
+      const clientId = `backend-service-${instanceId}`;
+      
+      console.log(`🔗 Using MQTT client ID: ${clientId}`);
+      
       this.client = mqtt.connect(this.brokerUrl, {
-        clientId: 'backend-service',
+        clientId: clientId,
         username: this.username,
         password: this.password,
         clean: true,

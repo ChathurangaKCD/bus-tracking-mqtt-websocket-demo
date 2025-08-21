@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: MQTT Backend HTTP API
+  version: 1.0.0
+  description: |
+    REST API for device management and monitoring in the MQTT bus tracking system.
+    This API provides HTTP endpoints to query device information, retrieve telemetry data,
+    and get system statistics.
+  license:
+    name: ISC
+  contact:
+    name: Choreo MQTT Demo
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Returns the health status of the backend service
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /devices:
+    get:
+      summary: Get All Devices
+      description: Retrieve a list of all 50 bus devices with their current status
+      tags:
+        - Devices
+      responses:
+        '200':
+          description: List of all devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+
+  /devices/online:
+    get:
+      summary: Get Online Devices
+      description: Retrieve a list of all currently online devices
+      tags:
+        - Devices
+      responses:
+        '200':
+          description: List of online devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+
+  /devices/{deviceId}:
+    get:
+      summary: Get Device by ID
+      description: Retrieve detailed information about a specific device
+      tags:
+        - Devices
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Device identifier (e.g., Bus-1 through Bus-50)
+          schema:
+            type: string
+            pattern: '^Bus-([1-9]|[1-4][0-9]|50)$'
+            example: Bus-1
+      responses:
+        '200':
+          description: Device information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /devices/{deviceId}/data:
+    get:
+      summary: Get Device Telemetry Data
+      description: Retrieve the latest telemetry data from a specific device
+      tags:
+        - Devices
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Device identifier
+          schema:
+            type: string
+            pattern: '^Bus-([1-9]|[1-4][0-9]|50)$'
+            example: Bus-1
+      responses:
+        '200':
+          description: Device telemetry data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDataResponse'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /devices/status/{status}:
+    get:
+      summary: Get Devices by Status
+      description: Retrieve devices filtered by their current status
+      tags:
+        - Devices
+      parameters:
+        - name: status
+          in: path
+          required: true
+          description: Device status to filter by
+          schema:
+            type: string
+            enum: [online, offline, maintenance]
+            example: online
+      responses:
+        '200':
+          description: List of devices with specified status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+        '400':
+          description: Invalid status parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /stats:
+    get:
+      summary: Get System Statistics
+      description: Retrieve aggregate statistics about all devices
+      tags:
+        - System
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - service
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Health status
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+          description: Current timestamp
+          example: "2025-08-21T10:30:00.000Z"
+        service:
+          type: string
+          description: Service identifier
+          example: mqtt-backend
+
+    Device:
+      type: object
+      required:
+        - id
+        - name
+        - status
+      properties:
+        id:
+          type: string
+          description: Unique device identifier
+          pattern: '^Bus-([1-9]|[1-4][0-9]|50)$'
+          example: Bus-1
+        name:
+          type: string
+          description: Human-readable device name
+          example: Bus 1
+        status:
+          type: string
+          enum: [online, offline, maintenance]
+          description: Current device status
+          example: online
+        lastSeen:
+          type: string
+          format: date-time
+          description: Last time device was seen
+          example: "2025-08-21T10:25:00.000Z"
+        lastData:
+          $ref: '#/components/schemas/DeviceData'
+
+    DeviceData:
+      type: object
+      required:
+        - deviceId
+        - timestamp
+        - location
+        - speed
+        - passengers
+        - fuel
+        - status
+        - randomString
+      properties:
+        deviceId:
+          type: string
+          description: Device identifier
+          pattern: '^Bus-([1-9]|[1-4][0-9]|50)$'
+          example: Bus-1
+        timestamp:
+          type: string
+          format: date-time
+          description: Data timestamp
+          example: "2025-08-21T10:30:00.000Z"
+        location:
+          $ref: '#/components/schemas/Location'
+        speed:
+          type: integer
+          description: Current speed in km/h
+          minimum: 0
+          maximum: 120
+          example: 45
+        passengers:
+          type: integer
+          description: Current passenger count
+          minimum: 0
+          maximum: 60
+          example: 25
+        fuel:
+          type: integer
+          description: Fuel level percentage
+          minimum: 0
+          maximum: 100
+          example: 75
+        status:
+          type: string
+          enum: [active, maintenance]
+          description: Device operational status
+          example: active
+        randomString:
+          type: string
+          description: Random identifier for tracking
+          example: a1b2c3d4e5f6g7h8
+
+    Location:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          format: double
+          description: Latitude coordinate
+          minimum: -90
+          maximum: 90
+          example: 6.9271
+        lng:
+          type: number
+          format: double
+          description: Longitude coordinate
+          minimum: -180
+          maximum: 180
+          example: 79.8612
+
+    DeviceStats:
+      type: object
+      required:
+        - total
+        - online
+        - offline
+        - maintenance
+      properties:
+        total:
+          type: integer
+          description: Total number of devices
+          example: 50
+        online:
+          type: integer
+          description: Number of online devices
+          example: 25
+        offline:
+          type: integer
+          description: Number of offline devices
+          example: 20
+        maintenance:
+          type: integer
+          description: Number of devices in maintenance
+          example: 5
+
+    DeviceListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - count
+      properties:
+        success:
+          type: boolean
+          description: Request success status
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+          description: Array of devices
+        count:
+          type: integer
+          description: Number of devices returned
+          example: 50
+
+    DeviceResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Request success status
+          example: true
+        data:
+          $ref: '#/components/schemas/Device'
+
+    DeviceDataResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Request success status
+          example: true
+        data:
+          allOf:
+            - $ref: '#/components/schemas/DeviceData'
+            - type: object
+              nullable: true
+          description: Latest device data (null if no data available)
+
+    StatsResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          description: Request success status
+          example: true
+        data:
+          $ref: '#/components/schemas/DeviceStats'
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          description: Request success status
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: Device not found
+
+tags:
+  - name: System
+    description: System health and statistics
+  - name: Devices
+    description: Device management and data retrieval

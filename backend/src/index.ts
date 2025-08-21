@@ -10,16 +10,22 @@ import { setupRoutes } from './routes';
 
 dotenv.config();
 
+// Create separate servers for HTTP and WebSocket
 const app = express();
-const server = createServer(app);
-const io = new SocketIOServer(server, {
+const httpServer = createServer(app);
+const wsApp = express();
+const wsServer = createServer(wsApp);
+
+const io = new SocketIOServer(wsServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
   }
 });
 
-const PORT = process.env.PORT || 3000;
+// Port configuration - support legacy PORT env var for backward compatibility
+const HTTP_PORT = process.env.HTTP_PORT || process.env.PORT || 3000;
+const WS_PORT = process.env.WS_PORT || 3001;
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
 const MQTT_USERNAME = process.env.MQTT_USERNAME || 'admin';
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD || 'admin123';
@@ -72,23 +78,38 @@ mqttService.connect().then(() => {
   console.error('❌ Failed to connect MQTT service:', error);
 });
 
-server.listen(PORT, () => {
-  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
-  console.log(`🔗 WebSocket endpoint: ws://localhost:${PORT}`);
+// Add a health check endpoint to the WebSocket server
+wsApp.get('/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'websocket-server' });
+});
+
+// Start both servers
+httpServer.listen(HTTP_PORT, () => {
+  console.log(`🚀 HTTP API server running on http://localhost:${HTTP_PORT}`);
   console.log(`📡 Connected to MQTT broker: ${MQTT_BROKER_URL}`);
+});
+
+wsServer.listen(WS_PORT, () => {
+  console.log(`🔗 WebSocket server running on ws://localhost:${WS_PORT}`);
 });
 
 process.on('SIGINT', () => {
   console.log('\n👋 Shutting down gracefully...');
   mqttService.disconnect();
-  server.close(() => {
-    console.log('✅ Server closed');
+  
+  httpServer.close(() => {
+    console.log('✅ HTTP server closed');
+  });
+  
+  wsServer.close(() => {
+    console.log('✅ WebSocket server closed');
     process.exit(0);
   });
 });
 
 process.on('SIGTERM', () => {
   mqttService.disconnect();
-  server.close();
+  httpServer.close();
+  wsServer.close();
   process.exit(0);
 });
